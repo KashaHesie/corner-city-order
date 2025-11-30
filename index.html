@@ -97,98 +97,111 @@
       overflow-y: auto;
       background: #fafafa;
     }
+    /* 打印视图，只放小票纯文本，字体尽量大，方便厨房看 */
+    #printView {
+      display: none;
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-size: 28px;    /* 这里只影响屏幕显示，真正纸上大小由 RawBT 里 double height/width 决定 */
+      line-height: 1.4;
+    }
   </style>
 </head>
 <body>
-  <h1>Corner City Gent 点单打印</h1>
+  <!-- 整个点单界面包在 app 里，打印时会被整体隐藏 -->
+  <div id="app">
+    <h1>Corner City Gent 点单打印</h1>
 
-  <!-- 1. 导入菜单 -->
-  <div class="section">
-    <h2>1. 导入菜单（粘贴自 Excel 的 CSV 文本）</h2>
-    <textarea
-      id="menuInput"
-      placeholder="每行一条菜品，格式：编号,中文名,荷兰语名,单价&#10;例如：31,古老鸡,kip zoetzure,12.30"
-    ></textarea>
-    <button id="btnImportMenu">导入菜单</button>
-    <div id="menuStatus" class="status"></div>
-    <div class="hint">
-      示例：<br />
-      <code>31,古老鸡,kip zoetzure,12.30</code><br />
-      <code>65,鸡面,bami kip,11.80</code>
+    <!-- 1. 导入菜单 -->
+    <div class="section">
+      <h2>1. 导入菜单（粘贴自 Excel 的 CSV 文本）</h2>
+      <textarea
+        id="menuInput"
+        placeholder="每行一条菜品，格式：编号,中文名,荷兰语名,单价&#10;例如：31,古老鸡,kip zoetzure,12.30"
+      ></textarea>
+      <button id="btnImportMenu">导入菜单</button>
+      <div id="menuStatus" class="status"></div>
+      <div class="hint">
+        示例：<br />
+        <code>31,古老鸡,kip zoetzure,12.30</code><br />
+        <code>65,鸡面,bami kip,11.80</code>
+      </div>
+    </div>
+
+    <!-- 2. 按编号加菜 -->
+    <div class="section">
+      <h2>2. 按编号加菜</h2>
+      <div>
+        编号：
+        <input id="codeInput" type="text" style="width: 80px" />
+        数量：
+        <input id="qtyInput" type="number" style="width: 80px" value="1" />
+        <button id="btnAddByCode">按编号加入</button>
+      </div>
+      <div id="orderStatus" class="status"></div>
+    </div>
+
+    <!-- 3. 当前订单 -->
+    <div class="section">
+      <h2>3. 当前订单</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>编号</th>
+            <th>中文名</th>
+            <th>荷兰语名</th>
+            <th class="right">单价 (€)</th>
+            <th class="right">数量</th>
+            <th class="right">小计</th>
+          </tr>
+        </thead>
+        <tbody id="orderBody"></tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="5" class="right">合计：</td>
+            <td class="right" id="orderTotal">€ 0.00</td>
+          </tr>
+        </tfoot>
+      </table>
+      <div style="margin-top: 6px">
+        <button id="btnRemoveLast" class="secondary">删除最后一项</button>
+        <button id="btnClearOrder" class="danger">清空订单</button>
+      </div>
+    </div>
+
+    <!-- 4. 生成打印内容 -->
+    <div class="section">
+      <h2>4. 生成打印内容</h2>
+      <button id="btnPrintBoth">打印两联（顾客联 + 厨房联）</button>
+      <button id="btnPrintCustomerOnly" class="secondary">只打印顾客联</button>
+      <button id="btnPrintKitchenOnly" class="secondary">只打印厨房联</button>
+
+      <div class="hint" style="margin-top: 6px">
+        ★ 使用方法：<br />
+        1）在 RawBT 中选择“Visit app site”，打开
+        <code>https://corner-city.vercel.app/</code><br />
+        2）输入订单后，点击上面的其中一个按钮；<br />
+        3）此页面会切换成<b>只有小票文字</b>的打印视图，<b>这时再点击 RawBT 顶部的小打印机图标</b>；<br />
+        4）打印完成后，按浏览器“返回”或重新打开链接，开始下一单。<br />
+        5）纸上字体变大：在 RawBT Demo 页面勾选 Double height / Double width 并保存为默认即可。
+      </div>
+
+      <h3 style="margin-top: 10px; font-size: 16px">预览（顾客联）</h3>
+      <pre id="previewCustomer" class="preview"></pre>
+      <h3 style="margin-top: 6px; font-size: 16px">预览（厨房联）</h3>
+      <pre id="previewKitchen" class="preview"></pre>
     </div>
   </div>
 
-  <!-- 2. 按编号加菜 -->
-  <div class="section">
-    <h2>2. 按编号加菜</h2>
-    <div>
-      编号：
-      <input id="codeInput" type="text" style="width: 80px" />
-      数量：
-      <input id="qtyInput" type="number" style="width: 80px" value="1" />
-      <button id="btnAddByCode">按编号加入</button>
-    </div>
-    <div id="orderStatus" class="status"></div>
-  </div>
-
-  <!-- 3. 当前订单 -->
-  <div class="section">
-    <h2>3. 当前订单</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>编号</th>
-          <th>中文名</th>
-          <th>荷兰语名</th>
-          <th class="right">单价 (€)</th>
-          <th class="right">数量</th>
-          <th class="right">小计</th>
-        </tr>
-      </thead>
-      <tbody id="orderBody"></tbody>
-      <tfoot>
-        <tr class="total-row">
-          <td colspan="5" class="right">合计：</td>
-          <td class="right" id="orderTotal">€ 0.00</td>
-        </tr>
-      </tfoot>
-    </table>
-    <div style="margin-top: 6px">
-      <button id="btnRemoveLast" class="secondary">删除最后一项</button>
-      <button id="btnClearOrder" class="danger">清空订单</button>
-    </div>
-  </div>
-
-  <!-- 4. 生成打印内容并发送到 RawBT -->
-  <div class="section">
-    <h2>4. 生成打印内容</h2>
-    <button id="btnPrintBoth">打印两联（顾客联 + 厨房联）</button>
-    <button id="btnPrintCustomerOnly" class="secondary">只打印顾客联</button>
-    <button id="btnPrintKitchenOnly" class="secondary">只打印厨房联</button>
-
-    <div class="hint" style="margin-top: 6px">
-      ★ 使用方法：<br />
-      1）在 RawBT 中选择“Visit app site”，打开
-      <code>https://corner-city.vercel.app/</code><br />
-      2）输入订单后，点击上面的按钮之一；<br />
-      3）RawBT 会自动弹出打印界面，<b>不要再点右上角的小打印机图标</b>。<br />
-      4）纸上字体大小请在 RawBT 的 Demo 页面里勾选 Double width / Double height
-      调整，然后保存为默认。
-    </div>
-
-    <!-- 可选：在页面上预览即将发送给 RawBT 的文本，方便你检查 -->
-    <h3 style="margin-top: 10px; font-size: 16px">预览（顾客联）</h3>
-    <pre id="previewCustomer" class="preview"></pre>
-    <h3 style="margin-top: 6px; font-size: 16px">预览（厨房联）</h3>
-    <pre id="previewKitchen" class="preview"></pre>
-  </div>
+  <!-- 打印视图：只包含要送给打印机的纯文本 -->
+  <pre id="printView"></pre>
 
   <script>
-    // ---------- 数据结构 ----------
-    const menu = {}; // 由编号 => { code, zh, nl, price }
-    const order = []; // 当前订单：[{ code, zh, nl, price, qty }]
+    // ========== 数据结构 ==========
+    const menu = {};  // 编号 => { code, zh, nl, price }
+    const order = []; // 当前订单
 
-    // ---------- 1. 导入菜单 ----------
+    // ========== 1. 导入菜单 ==========
     function importMenu() {
       const text = document.getElementById("menuInput").value.trim();
       const status = document.getElementById("menuStatus");
@@ -239,7 +252,7 @@
       }
     }
 
-    // ---------- 2. 按编号加菜 ----------
+    // ========== 2. 按编号加菜 ==========
     function addByCode() {
       const codeInput = document.getElementById("codeInput");
       const qtyInput = document.getElementById("qtyInput");
@@ -270,7 +283,7 @@
       renderOrder();
     }
 
-    // ---------- 3. 渲染当前订单 ----------
+    // ========== 3. 渲染当前订单 ==========
     function renderOrder() {
       const tbody = document.getElementById("orderBody");
       const totalCell = document.getElementById("orderTotal");
@@ -315,7 +328,7 @@
 
       totalCell.textContent = "€ " + total.toFixed(2);
 
-      // 同时更新预览
+      // 更新预览
       document.getElementById("previewCustomer").textContent =
         buildCustomerText();
       document.getElementById("previewKitchen").textContent =
@@ -334,7 +347,7 @@
       renderOrder();
     }
 
-    // ---------- 4. 构造小票文本（纯文本，不含 HTML 标签） ----------
+    // ========== 4. 构造顾客联 / 厨房联纯文本 ==========
     function buildCustomerText() {
       if (order.length === 0) return "=== 顾客联 Customer ===\n(当前无订单)\n";
 
@@ -347,8 +360,7 @@
       order.forEach((item) => {
         const lineTotal = item.price * item.qty;
         total += lineTotal;
-
-        // 顾客联只显示荷兰语名
+        // 顾客联：只显示荷兰语名 + 数量 + 单价/小计（不再带中文）
         lines.push(`${item.nl} × ${item.qty}`);
         lines.push(
           `€ ${item.price.toFixed(2)}   = € ${lineTotal.toFixed(2)}`
@@ -370,6 +382,7 @@
       lines.push("=== 厨房联 ===");
       lines.push("");
 
+      // 厨房联：大中文名 + 数量，例如 “2× 古老鸡”
       order.forEach((item) => {
         lines.push(`${item.qty}× ${item.zh}`);
       });
@@ -378,30 +391,31 @@
       return lines.join("\n");
     }
 
-    // ---------- 5. 发送到 RawBT ----------
-    function sendToRawBT(text) {
-      // 关键：使用 rawbt: URL 只发送我们拼好的纯文本
-      const url = "rawbt:" + encodeURIComponent(text);
-      window.location.href = url;
+    // ========== 5. 切换到“打印视图” ==========
+    function showPrintView(text) {
+      // 点单界面隐藏，只把小票纯文本放到 printView 里
+      document.getElementById("app").style.display = "none";
+      const pre = document.getElementById("printView");
+      pre.style.display = "block";
+      pre.textContent = text; // 纯文本，不含任何 HTML 标签
+
+      alert("现在请点击 RawBT 顶部的小打印机图标进行打印。\n打印完成后，按返回键或重新打开链接开始下一单。");
     }
 
     function printBoth() {
-      const customer = buildCustomerText();
-      const kitchen = buildKitchenText();
-      // 两联之间加几行空行，方便撕开
-      const allText = customer + "\n\n\n" + kitchen + "\n\n";
-      sendToRawBT(allText);
+      const allText = buildCustomerText() + "\n\n\n" + buildKitchenText();
+      showPrintView(allText);
     }
 
     function printCustomerOnly() {
-      sendToRawBT(buildCustomerText());
+      showPrintView(buildCustomerText());
     }
 
     function printKitchenOnly() {
-      sendToRawBT(buildKitchenText());
+      showPrintView(buildKitchenText());
     }
 
-    // ---------- 6. 事件绑定 ----------
+    // ========== 6. 事件绑定 ==========
     document.getElementById("btnImportMenu").addEventListener("click", importMenu);
     document.getElementById("btnAddByCode").addEventListener("click", addByCode);
     document.getElementById("btnRemoveLast").addEventListener("click", removeLast);
