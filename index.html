@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Corner City Gent 点单打印</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
+    /* ====== 屏幕样式（正常操作用） ====== */
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
         "Helvetica Neue", Arial, "Microsoft YaHei", sans-serif;
@@ -13,136 +15,198 @@
     }
     h1 {
       font-size: 22px;
-      margin: 8px 0 10px;
-      text-align: center;
+      margin: 4px 0 8px;
     }
     h2 {
       font-size: 18px;
-      margin: 10px 0 6px;
+      margin: 12px 0 6px;
     }
     textarea {
       width: 100%;
-      box-sizing: border-box;
       min-height: 80px;
-      font-size: 14px;
+      box-sizing: border-box;
+      font-family: monospace;
     }
     input[type="text"],
     input[type="number"] {
-      font-size: 16px;
       padding: 4px 6px;
+      font-size: 16px;
       box-sizing: border-box;
     }
     button {
-      font-size: 15px;
       padding: 6px 10px;
       margin: 4px 2px;
-      border-radius: 4px;
       border: none;
-      color: #fff;
-      background-color: #1976d2;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
     }
-    button.secondary {
-      background-color: #555;
+    button.primary {
+      background: #1976d2;
+      color: #fff;
     }
     button.danger {
-      background-color: #c62828;
+      background: #d32f2f;
+      color: #fff;
     }
-    button:disabled {
-      background-color: #aaa;
+    button.gray {
+      background: #555;
+      color: #fff;
     }
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 6px;
-      font-size: 14px;
     }
     th, td {
-      border-bottom: 1px solid #ccc;
-      padding: 3px;
+      border-bottom: 1px solid #ddd;
+      padding: 4px 2px;
       text-align: left;
+      font-size: 14px;
     }
-    th {
-      background: #f4f4f4;
+    th:nth-child(1),
+    td:nth-child(1) {
+      width: 12%;
     }
-    .right {
+    th:nth-child(2),
+    td:nth-child(2) {
+      width: 28%;
+    }
+    th:nth-child(3),
+    td:nth-child(3) {
+      width: 30%;
+    }
+    th:nth-child(4),
+    td:nth-child(4) {
+      width: 10%;
       text-align: right;
     }
-    .status {
-      font-size: 13px;
-      color: #555;
-      margin-top: 4px;
+    th:nth-child(5),
+    td:nth-child(5) {
+      width: 10%;
+      text-align: right;
     }
-    .total-row {
+    th:nth-child(6),
+    td:nth-child(6) {
+      width: 10%;
+      text-align: right;
+    }
+
+    #current-total {
+      text-align: right;
       font-weight: bold;
+      margin-top: 6px;
     }
-    .section {
+
+    .section-box {
       border: 1px solid #ddd;
-      border-radius: 4px;
       padding: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
+      border-radius: 4px;
     }
-    .hint {
-      font-size: 12px;
-      color: #777;
-      line-height: 1.4;
+
+    .print-buttons button {
+      min-width: 120px;
     }
-    pre.preview {
-      white-space: pre-wrap;
-      word-break: break-all;
-      font-size: 13px;
-      border: 1px dashed #ccc;
+
+    /* 打印预览用的文字（预先给你看） */
+    #preview-area {
+      margin-top: 8px;
+      border-top: 1px dashed #aaa;
+      padding-top: 6px;
+    }
+    #customer-preview, #kitchen-preview {
+      margin-top: 6px;
       padding: 6px;
-      margin-top: 4px;
-      max-height: 180px;
-      overflow-y: auto;
       background: #fafafa;
-    }
-    /* 打印视图，只放小票纯文本，字体尽量大，方便厨房看 */
-    #printView {
-      display: none;
       white-space: pre-wrap;
-      word-break: break-all;
-      font-size: 28px;    /* 这里只影响屏幕显示，真正纸上大小由 RawBT 里 double height/width 决定 */
-      line-height: 1.4;
+      font-family: monospace;
+    }
+
+    /* ====== 真正打印时的样式 ====== */
+    @media print {
+      /* 基本设置：把屏幕上的 UI 全部隐藏 */
+      body {
+        margin: 0;
+        font-size: 14pt;
+      }
+      .screen-only {
+        display: none !important;
+      }
+
+      /* 只打印这个区域 */
+      #print-area {
+        display: block !important;
+        padding: 0 4px;
+      }
+
+      #print-area pre {
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+
+      /* 顾客联字体：比现在大很多，约 5 倍效果 */
+      #customer-print {
+        font-size: 18pt;
+      }
+
+      /* 厨房联字体：中文放到最大，约 5 倍，现在你可以自己再调 */
+      #kitchen-print {
+        font-size: 26pt;
+      }
+
+      /* 双联打印时，每联之间强制换页 */
+      .receipt-block {
+        page-break-after: always;
+      }
+
+      /* 根据 body 上的 data-print 控制只打哪一联 */
+      body[data-print="customer"] #kitchen-print-block {
+        display: none !important;
+      }
+      body[data-print="kitchen"] #customer-print-block {
+        display: none !important;
+      }
+      /* 两联都打时，两个 block 都显示 */
+      body[data-print="both"] #customer-print-block,
+      body[data-print="both"] #kitchen-print-block {
+        display: block !important;
+      }
+    }
+
+    /* 屏幕上不需要真正的打印区域显示出来 */
+    #print-area {
+      display: none;
     }
   </style>
 </head>
-<body>
-  <!-- 整个点单界面包在 app 里，打印时会被整体隐藏 -->
-  <div id="app">
+<body data-print="both">
+  <div class="screen-only">
     <h1>Corner City Gent 点单打印</h1>
 
     <!-- 1. 导入菜单 -->
-    <div class="section">
+    <div class="section-box">
       <h2>1. 导入菜单（粘贴自 Excel 的 CSV 文本）</h2>
-      <textarea
-        id="menuInput"
-        placeholder="每行一条菜品，格式：编号,中文名,荷兰语名,单价&#10;例如：31,古老鸡,kip zoetzure,12.30"
-      ></textarea>
-      <button id="btnImportMenu">导入菜单</button>
-      <div id="menuStatus" class="status"></div>
-      <div class="hint">
-        示例：<br />
-        <code>31,古老鸡,kip zoetzure,12.30</code><br />
-        <code>65,鸡面,bami kip,11.80</code>
-      </div>
+      <p>每行格式：编号,中文名,荷兰语名,单价</p>
+      <p>示例：<code>31,古老鸡,kip zoetzure,12.30</code></p>
+      <textarea id="menu-input" placeholder="在这里粘贴菜单，每行一个菜品"></textarea>
+      <button class="primary" id="btn-import-menu">导入菜单</button>
+      <span id="menu-status"></span>
     </div>
 
     <!-- 2. 按编号加菜 -->
-    <div class="section">
+    <div class="section-box">
       <h2>2. 按编号加菜</h2>
-      <div>
-        编号：
-        <input id="codeInput" type="text" style="width: 80px" />
-        数量：
-        <input id="qtyInput" type="number" style="width: 80px" value="1" />
-        <button id="btnAddByCode">按编号加入</button>
-      </div>
-      <div id="orderStatus" class="status"></div>
+      编号：
+      <input type="text" id="dish-code" style="width: 80px;">
+      数量：
+      <input type="number" id="dish-qty" style="width: 80px;" value="1" min="1">
+      <button class="primary" id="btn-add-by-code">按编号加入</button>
+      <span id="add-status"></span>
     </div>
 
     <!-- 3. 当前订单 -->
-    <div class="section">
+    <div class="section-box">
       <h2>3. 当前订单</h2>
       <table>
         <thead>
@@ -150,286 +214,231 @@
             <th>编号</th>
             <th>中文名</th>
             <th>荷兰语名</th>
-            <th class="right">单价 (€)</th>
-            <th class="right">数量</th>
-            <th class="right">小计</th>
+            <th>单价 (€)</th>
+            <th>数量</th>
+            <th>小计</th>
           </tr>
         </thead>
-        <tbody id="orderBody"></tbody>
-        <tfoot>
-          <tr class="total-row">
-            <td colspan="5" class="right">合计：</td>
-            <td class="right" id="orderTotal">€ 0.00</td>
-          </tr>
-        </tfoot>
+        <tbody id="order-body"></tbody>
       </table>
-      <div style="margin-top: 6px">
-        <button id="btnRemoveLast" class="secondary">删除最后一项</button>
-        <button id="btnClearOrder" class="danger">清空订单</button>
+      <div id="current-total">合计：€ 0.00</div>
+      <div style="margin-top:6px;">
+        <button class="danger" id="btn-remove-last">删除最后一项</button>
+        <button class="gray" id="btn-clear-order">清空订单</button>
       </div>
     </div>
 
-    <!-- 4. 生成打印内容 -->
-    <div class="section">
+    <!-- 4. 生成打印内容 & 打印按钮 -->
+    <div class="section-box">
       <h2>4. 生成打印内容</h2>
-      <button id="btnPrintBoth">打印两联（顾客联 + 厨房联）</button>
-      <button id="btnPrintCustomerOnly" class="secondary">只打印顾客联</button>
-      <button id="btnPrintKitchenOnly" class="secondary">只打印厨房联</button>
-
-      <div class="hint" style="margin-top: 6px">
-        ★ 使用方法：<br />
-        1）在 RawBT 中选择“Visit app site”，打开
-        <code>https://corner-city.vercel.app/</code><br />
-        2）输入订单后，点击上面的其中一个按钮；<br />
-        3）此页面会切换成<b>只有小票文字</b>的打印视图，<b>这时再点击 RawBT 顶部的小打印机图标</b>；<br />
-        4）打印完成后，按浏览器“返回”或重新打开链接，开始下一单。<br />
-        5）纸上字体变大：在 RawBT Demo 页面勾选 Double height / Double width 并保存为默认即可。
+      <div class="print-buttons">
+        <button class="primary" id="btn-gen-and-print-both">打印两联（顾客联 + 厨房联）</button>
+        <button id="btn-gen-and-print-cust">只打印顾客联</button>
+        <button id="btn-gen-and-print-kitchen">只打印厨房联</button>
       </div>
+      <p style="font-size: 13px; margin-top:6px;">
+        提示：先在上方生成订单内容，然后点击其中一个按钮。<br>
+        浏览器会打开打印界面，选择 RawBT 作为打印机，即可把内容通过 Xprinter 打印出来。
+      </p>
 
-      <h3 style="margin-top: 10px; font-size: 16px">预览（顾客联）</h3>
-      <pre id="previewCustomer" class="preview"></pre>
-      <h3 style="margin-top: 6px; font-size: 16px">预览（厨房联）</h3>
-      <pre id="previewKitchen" class="preview"></pre>
+      <div id="preview-area">
+        <strong>打印预览（屏幕上查看用，不会被打印整页）</strong>
+        <div id="customer-preview"></div>
+        <div id="kitchen-preview"></div>
+      </div>
     </div>
   </div>
 
-  <!-- 打印视图：只包含要送给打印机的纯文本 -->
-  <pre id="printView"></pre>
+  <!-- 真正给打印用的纯文本区域（window.print 时只会打印这里） -->
+  <div id="print-area">
+    <div id="customer-print-block" class="receipt-block">
+      <pre id="customer-print"></pre>
+    </div>
+    <div id="kitchen-print-block" class="receipt-block">
+      <pre id="kitchen-print"></pre>
+    </div>
+  </div>
 
   <script>
-    // ========== 数据结构 ==========
-    const menu = {};  // 编号 => { code, zh, nl, price }
-    const order = []; // 当前订单
+    // 菜单与订单数据
+    const menuMap = new Map(); // code -> {code, cn, nl, price}
+    const orderItems = [];     // {code, cn, nl, price, qty}
 
-    // ========== 1. 导入菜单 ==========
+    const menuInput = document.getElementById('menu-input');
+    const menuStatus = document.getElementById('menu-status');
+    const orderBody = document.getElementById('order-body');
+    const currentTotalEl = document.getElementById('current-total');
+    const addStatus = document.getElementById('add-status');
+
+    const customerPreview = document.getElementById('customer-preview');
+    const kitchenPreview = document.getElementById('kitchen-preview');
+    const customerPrint = document.getElementById('customer-print');
+    const kitchenPrint = document.getElementById('kitchen-print');
+
+    function parsePrice(str) {
+      if (!str) return 0;
+      str = String(str).replace(',', '.').trim();
+      const v = parseFloat(str);
+      return isNaN(v) ? 0 : v;
+    }
+
+    function formatMoney(num) {
+      return num.toFixed(2);
+    }
+
     function importMenu() {
-      const text = document.getElementById("menuInput").value.trim();
-      const status = document.getElementById("menuStatus");
-
-      if (!text) {
-        status.textContent = "请输入菜单内容。";
-        return;
-      }
-
-      let count = 0;
-      const errorLines = [];
-
-      text.split(/\r?\n/).forEach((line, index) => {
+      menuMap.clear();
+      const lines = menuInput.value.split(/\r?\n/);
+      let ok = 0;
+      for (const line of lines) {
         const trimmed = line.trim();
-        if (!trimmed) return;
-
-        const parts = trimmed.split(",");
-        if (parts.length < 4) {
-          errorLines.push(index + 1);
-          return;
-        }
-
+        if (!trimmed) continue;
+        const parts = trimmed.split(',');
+        if (parts.length < 4) continue;
         const code = parts[0].trim();
-        const zh = parts[1].trim();
+        const cn = parts[1].trim();
         const nl = parts[2].trim();
-        const priceStr = parts[3].trim().replace(",", ".");
-        const price = parseFloat(priceStr);
-
-        if (!code || !zh || !nl || isNaN(price)) {
-          errorLines.push(index + 1);
-          return;
-        }
-
-        menu[code] = { code, zh, nl, price };
-        count++;
-      });
-
-      if (count === 0) {
-        status.textContent =
-          "导入失败：没有有效数据，请检查每行是否为“编号,中文名,荷兰语名,单价”。";
-      } else {
-        status.textContent = `导入菜单完成，共 ${count} 项。`;
-        if (errorLines.length) {
-          status.textContent += `（第 ${errorLines.join(
-            ","
-          )} 行格式有问题，已跳过）`;
-        }
+        const price = parsePrice(parts[3]);
+        if (!code || !cn || !nl || !price) continue;
+        menuMap.set(code, { code, cn, nl, price });
+        ok++;
       }
+      menuStatus.textContent = `导入菜单完成，共 ${ok} 项。`;
     }
 
-    // ========== 2. 按编号加菜 ==========
-    function addByCode() {
-      const codeInput = document.getElementById("codeInput");
-      const qtyInput = document.getElementById("qtyInput");
-      const status = document.getElementById("orderStatus");
-
-      const code = (codeInput.value || "").trim();
-      const qty = parseInt(qtyInput.value, 10) || 0;
-
-      if (!menu[code]) {
-        status.textContent = "该编号在菜单中不存在，请检查。";
-        return;
-      }
-      if (qty <= 0) {
-        status.textContent = "数量必须大于 0。";
-        return;
-      }
-
-      const item = menu[code];
-      let row = order.find((r) => r.code === code);
-      if (row) {
-        row.qty += qty;
-      } else {
-        row = { ...item, qty };
-        order.push(row);
-      }
-
-      status.textContent = "";
-      renderOrder();
-    }
-
-    // ========== 3. 渲染当前订单 ==========
     function renderOrder() {
-      const tbody = document.getElementById("orderBody");
-      const totalCell = document.getElementById("orderTotal");
-      tbody.innerHTML = "";
-
+      orderBody.innerHTML = '';
       let total = 0;
-      order.forEach((item) => {
-        const lineTotal = item.price * item.qty;
-        total += lineTotal;
+      for (const item of orderItems) {
+        const tr = document.createElement('tr');
+        const subtotal = item.price * item.qty;
+        total += subtotal;
+        tr.innerHTML = `
+          <td>${item.code}</td>
+          <td>${item.cn}</td>
+          <td>${item.nl}</td>
+          <td>${formatMoney(item.price)}</td>
+          <td>${item.qty}</td>
+          <td>${formatMoney(subtotal)}</td>
+        `;
+        orderBody.appendChild(tr);
+      }
+      currentTotalEl.textContent = '合计：€ ' + formatMoney(total);
+    }
 
-        const tr = document.createElement("tr");
+    function addByCode() {
+      addStatus.textContent = '';
+      const codeInput = document.getElementById('dish-code');
+      const qtyInput = document.getElementById('dish-qty');
+      const code = codeInput.value.trim();
+      const qty = parseInt(qtyInput.value, 10) || 1;
 
-        const tdCode = document.createElement("td");
-        tdCode.textContent = item.code;
-        tr.appendChild(tdCode);
-
-        const tdZh = document.createElement("td");
-        tdZh.textContent = item.zh;
-        tr.appendChild(tdZh);
-
-        const tdNl = document.createElement("td");
-        tdNl.textContent = item.nl;
-        tr.appendChild(tdNl);
-
-        const tdPrice = document.createElement("td");
-        tdPrice.className = "right";
-        tdPrice.textContent = item.price.toFixed(2);
-        tr.appendChild(tdPrice);
-
-        const tdQty = document.createElement("td");
-        tdQty.className = "right";
-        tdQty.textContent = item.qty;
-        tr.appendChild(tdQty);
-
-        const tdLine = document.createElement("td");
-        tdLine.className = "right";
-        tdLine.textContent = lineTotal.toFixed(2);
-        tr.appendChild(tdLine);
-
-        tbody.appendChild(tr);
-      });
-
-      totalCell.textContent = "€ " + total.toFixed(2);
-
-      // 更新预览
-      document.getElementById("previewCustomer").textContent =
-        buildCustomerText();
-      document.getElementById("previewKitchen").textContent =
-        buildKitchenText();
+      if (!code) {
+        addStatus.textContent = '请输入编号';
+        return;
+      }
+      const item = menuMap.get(code);
+      if (!item) {
+        addStatus.textContent = '菜单中找不到该编号';
+        return;
+      }
+      const existing = orderItems.find(it => it.code === code);
+      if (existing) {
+        existing.qty += qty;
+      } else {
+        orderItems.push({
+          code: item.code,
+          cn: item.cn,
+          nl: item.nl,
+          price: item.price,
+          qty
+        });
+      }
+      renderOrder();
+      addStatus.textContent = '已加入：' + item.cn;
+      codeInput.value = '';
+      qtyInput.value = '1';
     }
 
     function removeLast() {
-      if (order.length > 0) {
-        order.pop();
+      if (orderItems.length > 0) {
+        orderItems.pop();
         renderOrder();
       }
     }
 
     function clearOrder() {
-      order.length = 0;
+      orderItems.length = 0;
       renderOrder();
     }
 
-    // ========== 4. 构造顾客联 / 厨房联纯文本 ==========
-    function buildCustomerText() {
-      if (order.length === 0) return "=== 顾客联 Customer ===\n(当前无订单)\n";
-
-      const lines = [];
-      lines.push("=== 顾客联 Customer ===");
-      lines.push("");
-
+    // 生成顾客联 / 厨房联的纯文本
+    function buildReceipts() {
+      if (orderItems.length === 0) {
+        alert('当前订单为空');
+        return { customer: '', kitchen: '' };
+      }
       let total = 0;
 
-      order.forEach((item) => {
-        const lineTotal = item.price * item.qty;
-        total += lineTotal;
-        // 顾客联：只显示荷兰语名 + 数量 + 单价/小计（不再带中文）
-        lines.push(`${item.nl} × ${item.qty}`);
-        lines.push(
-          `€ ${item.price.toFixed(2)}   = € ${lineTotal.toFixed(2)}`
+      // 顾客联：只要 荷兰语名 x 份数 + Total
+      let custLines = [];
+      custLines.push('=== 顾客联 Customer ===');
+      custLines.push('');
+      for (const item of orderItems) {
+        const subtotal = item.price * item.qty;
+        total += subtotal;
+        custLines.push(
+          `${item.nl} × ${item.qty}`
         );
-        lines.push("");
-      });
+      }
+      custLines.push('');
+      custLines.push(`Total: € ${formatMoney(total)}`);
 
-      lines.push("--------------------------------");
-      lines.push(`Total: € ${total.toFixed(2)}`);
-      lines.push("");
+      // 厨房联：只要 份数 × 中文名
+      let kitLines = [];
+      kitLines.push('=== 厨房联 ===');
+      kitLines.push('');
+      for (const item of orderItems) {
+        kitLines.push(`${item.qty}× ${item.cn}`);
+      }
 
-      return lines.join("\n");
+      const custText = custLines.join('\n');
+      const kitText = kitLines.join('\n');
+
+      // 在屏幕上预览
+      customerPreview.textContent = custText;
+      kitchenPreview.textContent = kitText;
+
+      // 给打印区域
+      customerPrint.textContent = custText;
+      kitchenPrint.textContent = kitText;
+
+      return { customer: custText, kitchen: kitText };
     }
 
-    function buildKitchenText() {
-      if (order.length === 0) return "=== 厨房联 ===\n(当前无订单)\n";
+    function generateAndPrint(mode) {
+      const res = buildReceipts();
+      if (!res.customer) return; // 空订单已提示
 
-      const lines = [];
-      lines.push("=== 厨房联 ===");
-      lines.push("");
-
-      // 厨房联：大中文名 + 数量，例如 “2× 古老鸡”
-      order.forEach((item) => {
-        lines.push(`${item.qty}× ${item.zh}`);
-      });
-
-      lines.push("");
-      return lines.join("\n");
+      document.body.setAttribute('data-print', mode); // both / customer / kitchen
+      // 触发浏览器打印（Chrome 里选择 RawBT）
+      window.print();
+      // 恢复默认
+      document.body.setAttribute('data-print', 'both');
     }
 
-    // ========== 5. 切换到“打印视图” ==========
-    function showPrintView(text) {
-      // 点单界面隐藏，只把小票纯文本放到 printView 里
-      document.getElementById("app").style.display = "none";
-      const pre = document.getElementById("printView");
-      pre.style.display = "block";
-      pre.textContent = text; // 纯文本，不含任何 HTML 标签
+    // 事件绑定
+    document.getElementById('btn-import-menu').addEventListener('click', importMenu);
+    document.getElementById('btn-add-by-code').addEventListener('click', addByCode);
+    document.getElementById('btn-remove-last').addEventListener('click', removeLast);
+    document.getElementById('btn-clear-order').addEventListener('click', clearOrder);
 
-      alert("现在请点击 RawBT 顶部的小打印机图标进行打印。\n打印完成后，按返回键或重新打开链接开始下一单。");
-    }
-
-    function printBoth() {
-      const allText = buildCustomerText() + "\n\n\n" + buildKitchenText();
-      showPrintView(allText);
-    }
-
-    function printCustomerOnly() {
-      showPrintView(buildCustomerText());
-    }
-
-    function printKitchenOnly() {
-      showPrintView(buildKitchenText());
-    }
-
-    // ========== 6. 事件绑定 ==========
-    document.getElementById("btnImportMenu").addEventListener("click", importMenu);
-    document.getElementById("btnAddByCode").addEventListener("click", addByCode);
-    document.getElementById("btnRemoveLast").addEventListener("click", removeLast);
-    document.getElementById("btnClearOrder").addEventListener("click", clearOrder);
-
-    document
-      .getElementById("btnPrintBoth")
-      .addEventListener("click", printBoth);
-    document
-      .getElementById("btnPrintCustomerOnly")
-      .addEventListener("click", printCustomerOnly);
-    document
-      .getElementById("btnPrintKitchenOnly")
-      .addEventListener("click", printKitchenOnly);
+    document.getElementById('btn-gen-and-print-both')
+      .addEventListener('click', () => generateAndPrint('both'));
+    document.getElementById('btn-gen-and-print-cust')
+      .addEventListener('click', () => generateAndPrint('customer'));
+    document.getElementById('btn-gen-and-print-kitchen')
+      .addEventListener('click', () => generateAndPrint('kitchen'));
   </script>
 </body>
 </html>
