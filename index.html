@@ -1,233 +1,472 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<title>Corner City Gent 点单打印</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <title>Corner City Gent 点单打印</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "PingFang SC", "Microsoft YaHei", sans-serif;
+      margin: 8px;
+      font-size: 15px;
+    }
+    h1 {
+      font-size: 22px;
+      margin: 4px 0 8px;
+      text-align: center;
+    }
+    h2 {
+      font-size: 18px;
+      margin: 10px 0 6px;
+    }
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 80px;
+      font-size: 14px;
+    }
+    input[type="text"],
+    input[type="number"] {
+      font-size: 16px;
+      padding: 3px 6px;
+      box-sizing: border-box;
+    }
+    button {
+      font-size: 14px;
+      padding: 4px 8px;
+      margin: 2px 2px 2px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 3px 4px;
+      text-align: left;
+    }
+    th {
+      background: #f2f2f2;
+    }
+    .number-cell {
+      width: 50px;
+      text-align: center;
+    }
+    .action-cell button {
+      padding: 2px 6px;
+      font-size: 12px;
+    }
+    .section {
+      border: 1px solid #ddd;
+      padding: 6px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+    }
+    .section-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .total-row {
+      font-weight: bold;
+      text-align: right;
+    }
+    .btn-danger {
+      background: #e74c3c;
+      color: #fff;
+    }
+    .btn-primary {
+      background: #3498db;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #7f8c8d;
+      color: #fff;
+    }
+    .btn-green {
+      background: #27ae60;
+      color: #fff;
+    }
+    .slip-box {
+      border: 1px dashed #999;
+      padding: 6px;
+      margin-top: 4px;
+      white-space: pre-wrap;
+      font-family: "Menlo", "Consolas", monospace;
+    }
 
-<style>
-body{
-    font-family: -apple-system, BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Microsoft YaHei",sans-serif;
-    margin: 8px;
-    font-size: 16px;
-}
+    /* 预览里字号 */
+    .slip-title {
+      font-size: 18px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .customer-line {
+      font-size: 18px; /* 屏幕预览稍大一点 */
+      margin: 2px 0;
+    }
+    .kitchen-line {
+      font-size: 26px; /* 预览里也放大 */
+      font-weight: bold;
+      margin: 4px 0;
+    }
 
-h2{
-    font-size: 20px;
-    margin-top:20px;
-    margin-bottom:6px;
-    font-weight: bold;
-}
-
-input,textarea,button{
-    font-size:18px;
-    padding:6px;
-}
-table{
-    width:100%;
-    border-collapse: collapse;
-    margin-top:6px;
-}
-th,td{
-    border:1px solid #ddd;
-    padding:6px;
-    font-size:18px;
-}
-button{
-    margin-top:6px;
-}
-
-.big-cn{
-    font-size:48px;
-    font-weight:bold;
-}
-</style>
+    .slip-section-title {
+      margin-top: 6px;
+      font-weight: bold;
+    }
+  </style>
 </head>
-
 <body>
+  <h1>Corner City Gent 点单打印</h1>
 
-<h2>1. 导入菜单（粘贴 Excel 导出的 CSV 文本）</h2>
-<textarea id="csvInput" rows="4" style="width:100%;"></textarea><br>
-<button onclick="importCSV()">导入菜单</button>
-<span id="menuCount"></span>
+  <!-- 1. 导入菜单 -->
+  <div class="section">
+    <div class="section-title">1. 导入菜单（粘贴自 Excel 的 CSV 文本）</div>
+    <p style="margin: 2px 0;">
+      每行格式：<code>编号,中文名,荷兰语名,价格</code><br />
+      示例：<code>31,古老鸡,kip zoetzure,11.50</code>
+    </p>
+    <textarea id="menuInput" placeholder="31,古老鸡,kip zoetzure,11.50
+65,鸡面,bami kip,11.80"></textarea>
+    <div style="margin-top:4px;">
+      <button class="btn-primary" onclick="importMenu()">导入菜单</button>
+      <span id="menuStatus" style="margin-left:6px;color:#555;"></span>
+    </div>
+  </div>
 
-<h2>2. 按编号加菜</h2>
-编号：<input id="addNum" size="4">
-数量：<input id="addQty" size="4" value="1">
-<button onclick="addItem()">按编号加入</button>
+  <!-- 2. 按编号加菜 -->
+  <div class="section">
+    <div class="section-title">2. 按编号加菜</div>
+    <div style="margin-bottom:4px;">
+      编号：
+      <input id="codeInput" type="text" style="width:70px;" />
+      数量：
+      <input id="qtyInput" type="number" min="1" value="1" style="width:60px;" />
+      <button class="btn-primary" onclick="addByCode()">按编号加入</button>
+      <span id="addStatus" style="margin-left:6px;color:#e74c3c;"></span>
+    </div>
+  </div>
 
-<h2>3. 当前订单</h2>
-<table id="orderTable">
-<thead>
-<tr>
-<th>编号</th><th>中文名</th><th>荷兰语名</th><th>单价 (€)</th><th>数量</th><th>小计</th><th>操作</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-<div style="margin-top:6px;">
-<button onclick="removeLast()">删除最后一项</button>
-<button onclick="clearOrder()">清空订单</button>
-</div>
+  <!-- 3. 当前订单 -->
+  <div class="section">
+    <div class="section-title">3. 当前订单</div>
+    <div style="margin-bottom:4px;">
+      <button class="btn-secondary" onclick="removeLast()">删除最后一项</button>
+      <button class="btn-danger" onclick="clearOrder()">清空订单</button>
+    </div>
+    <table id="orderTable">
+      <thead>
+        <tr>
+          <th class="number-cell">编号</th>
+          <th>中文名</th>
+          <th>荷兰语名</th>
+          <th class="number-cell">单价 (€)</th>
+          <th class="number-cell">数量</th>
+          <th class="number-cell">小计</th>
+          <th class="number-cell">操作</th>
+        </tr>
+      </thead>
+      <tbody id="orderTbody">
+        <!-- 动态填充 -->
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5" class="total-row">合计：</td>
+          <td class="total-row" id="orderTotal">€ 0.00</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
 
-<h2>4. 生成打印内容</h2>
-<button onclick="printBoth()">打印两联（顾客 + 厨房）</button>
-<button onclick="printCustomer()">只打印顾客联</button>
-<button onclick="printKitchen()">只打印厨房联</button>
+  <!-- 4. 生成打印内容 -->
+  <div class="section">
+    <div class="section-title">4. 生成打印内容 / 打印</div>
+    <p style="margin:2px 0 6px;">
+      先添加好当前订单，再选择下面按钮：
+    </p>
+    <div style="margin-bottom:4px;">
+      <button class="btn-green" onclick="printBoth()">打印两联（顾客联 + 厨房联）</button>
+    </div>
+    <div style="margin-bottom:4px;">
+      <button class="btn-primary" onclick="printCustomer()">只打印顾客联</button>
+      <button class="btn-primary" onclick="printKitchen()">只打印厨房联</button>
+    </div>
 
-<hr>
-<h2>=== 顾客联 Customer ===</h2>
-<div id="previewCustomer"></div>
+    <p style="margin-top:6px;margin-bottom:4px;">
+      预览（下面只是网页预览，实际打印字号会再放大）：
+    </p>
+    <div class="slip-section-title">=== 顾客联 Customer 预览 ===</div>
+    <div id="customerSlipPreview" class="slip-box"></div>
 
-<h2>=== 厨房联 Kitchen ===</h2>
-<div id="previewKitchen"></div>
+    <div class="slip-section-title">=== 厨房联 预览 ===</div>
+    <div id="kitchenSlipPreview" class="slip-box"></div>
+  </div>
 
-<script>
-// ====== 1. 菜单数据 ======
-let menu = {}; // {编号:{cn, nl, price}}
+  <script>
+    // 菜单：code -> { code, cn, nl, price }
+    const menuMap = new Map();
+    // 当前订单：[{ code, cn, nl, price, qty }]
+    let orderList = [];
 
-// ====== 2. 导入 CSV ======
-function importCSV(){
-    const text = document.getElementById("csvInput").value.trim();
-    if(!text){
-        alert("请粘贴 CSV 文本");
-        return;
+    function parsePrice(str) {
+      if (!str) return 0;
+      return parseFloat(String(str).replace(",", "."));
     }
 
-    menu = {};
-    let lines = text.split(/\r?\n/);
+    function importMenu() {
+      const text = document.getElementById("menuInput").value.trim();
+      const status = document.getElementById("menuStatus");
+      menuMap.clear();
 
-    lines.forEach(line=>{
-        let parts = line.split(",");
-        if(parts.length < 4) return;
-
-        let num = parts[0].trim();
-        let cn = parts[1].trim();
-        let nl = parts[2].trim();
-        let price = parseFloat(parts[3].trim());
-
-        menu[num] = {cn,nl,price};
-    });
-
-    document.getElementById("menuCount").innerText = `导入菜单完成，共 ${Object.keys(menu).length} 项。`;
-}
-
-// ====== 3. 订单管理 ======
-let order = [];
-
-function addItem(){
-    let num = document.getElementById("addNum").value.trim();
-    let qty = parseInt(document.getElementById("addQty").value);
-
-    if(!menu[num]){
-        alert("编号不存在");
+      if (!text) {
+        status.textContent = "菜单为空。";
         return;
+      }
+
+      const lines = text.split(/\r?\n/);
+      let ok = 0;
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        // 支持英文逗号和中文逗号
+        const parts = trimmed.split(/[,，]/).map((p) => p.trim());
+        if (parts.length < 4) continue;
+        const [code, cn, nl, priceStr] = parts;
+        const price = parsePrice(priceStr);
+        if (!code || !cn || !nl || isNaN(price)) continue;
+
+        menuMap.set(code, { code, cn, nl, price });
+        ok++;
+      }
+
+      status.textContent = `导入菜单完成，共 ${ok} 项。`;
+      document.getElementById("addStatus").textContent = "";
     }
 
-    order.push({
-        num,
-        cn: menu[num].cn,
-        nl: menu[num].nl,
-        price: menu[num].price,
-        qty
-    });
+    function addByCode() {
+      const code = document.getElementById("codeInput").value.trim();
+      const qtyVal = document.getElementById("qtyInput").value;
+      const qty = parseInt(qtyVal, 10) || 1;
+      const status = document.getElementById("addStatus");
 
-    renderOrder();
-}
+      if (!code) {
+        status.textContent = "请填写编号。";
+        return;
+      }
+      const item = menuMap.get(code);
+      if (!item) {
+        status.textContent = `编号 ${code} 不在菜单中。`;
+        return;
+      }
+      if (qty <= 0) {
+        status.textContent = "数量必须>=1。";
+        return;
+      }
 
-function removeLast(){
-    order.pop();
-    renderOrder();
-}
+      orderList.push({
+        code: item.code,
+        cn: item.cn,
+        nl: item.nl,
+        price: item.price,
+        qty: qty,
+      });
 
-function clearOrder(){
-    order = [];
-    renderOrder();
-}
+      status.textContent = "";
+      renderOrderTable();
+    }
 
-function renderOrder(){
-    const tbody = document.querySelector("#orderTable tbody");
-    tbody.innerHTML = "";
+    function renderOrderTable() {
+      const tbody = document.getElementById("orderTbody");
+      tbody.innerHTML = "";
+      let total = 0;
 
-    let total = 0;
-
-    order.forEach((item,idx)=>{
-        let tr = document.createElement("tr");
-        let sub = item.qty * item.price;
-        total += sub;
+      orderList.forEach((item, idx) => {
+        const tr = document.createElement("tr");
+        const lineTotal = item.price * item.qty;
+        total += lineTotal;
 
         tr.innerHTML = `
-            <td>${item.num}</td>
-            <td>${item.cn}</td>
-            <td>${item.nl}</td>
-            <td>${item.price.toFixed(2)}</td>
-            <td>${item.qty}</td>
-            <td>${sub.toFixed(2)}</td>
-            <td><button onclick="del(${idx})">删</button></td>
+          <td class="number-cell">${item.code}</td>
+          <td>${item.cn}</td>
+          <td>${item.nl}</td>
+          <td class="number-cell">${item.price.toFixed(2)}</td>
+          <td class="number-cell">${item.qty}</td>
+          <td class="number-cell">${lineTotal.toFixed(2)}</td>
+          <td class="number-cell action-cell">
+            <button class="btn-danger" onclick="removeAt(${idx})">删</button>
+          </td>
         `;
         tbody.appendChild(tr);
-    });
+      });
 
-    let tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="7" style="text-align:right;font-size:20px;font-weight:bold;">
-        合计：€ ${total.toFixed(2)}
-    </td>`;
-    tbody.appendChild(tr);
+      document.getElementById("orderTotal").textContent = "€ " + total.toFixed(2);
 
-    buildPreviews();
-}
+      // 同时更新打印预览
+      updateSlipPreview();
+    }
 
-function del(i){
-    order.splice(i,1);
-    renderOrder();
-}
+    function removeAt(index) {
+      orderList.splice(index, 1);
+      renderOrderTable();
+    }
 
-// ====== 4. 生成预览内容 ======
-function buildPreviews(){
-    let cust = "";
-    let kit = "";
+    function removeLast() {
+      if (orderList.length > 0) {
+        orderList.pop();
+        renderOrderTable();
+      }
+    }
 
-    let total = 0;
+    function clearOrder() {
+      if (orderList.length === 0) return;
+      orderList = [];
+      renderOrderTable();
+    }
 
-    order.forEach(it=>{
-        let sub = it.qty * it.price;
-        total += sub;
+    // === 生成顾客联 / 厨房联的 HTML 字符串（用于预览和打印） ===
 
-        cust += `${it.num}  ${it.nl}   €${it.price} × ${it.qty}  = €${sub.toFixed(2)}<br>`;
-        kit  += `<span class="big-cn">${it.qty}× ${it.cn}</span><br>`;
-    });
+    function buildCustomerSlipHTML() {
+      // 顾客联要求：只显示「荷兰语菜名 x 份数」，最后一行 Total
+      let total = 0;
+      let linesHTML = "";
 
-    cust += `<br><b>Total: € ${total.toFixed(2)}</b><br>`;
+      orderList.forEach((item) => {
+        const lineTotal = item.price * item.qty;
+        total += lineTotal;
+        const txt = `${item.nl} × ${item.qty}`;
+        linesHTML += `<div class="customer-line">${txt}</div>`;
+      });
 
-    document.getElementById("previewCustomer").innerHTML = cust;
-    document.getElementById("previewKitchen").innerHTML = kit;
-}
+      const totalLine = `Total: € ${total.toFixed(2)}`;
 
-// ====== 5. RawBT 打印（使用 ESC/POS + GBK编码） ======
-function sendToRawBT(html){
-    let url = "rawbt:base64," + btoa(unescape(encodeURIComponent(html)));
-    window.location.href = url;
-}
+      return `
+        <div>
+          <div class="slip-title">=== 顾客联 Customer ===</div>
+          ${linesHTML || '<div class="customer-line">(无菜品)</div>'}
+          <div class="customer-line" style="margin-top:6px;font-weight:bold;">
+            ${totalLine}
+          </div>
+        </div>
+      `;
+    }
 
-function wrap(text){
-    return text + "\n";
-}
+    function buildKitchenSlipHTML() {
+      // 厨房联：大号中文，格式「数量 × 中文名」
+      let linesHTML = "";
+      orderList.forEach((item) => {
+        const txt = `${item.qty}× ${item.cn}`;
+        linesHTML += `<div class="kitchen-line">${txt}</div>`;
+      });
 
-function printCustomer(){
-    let html = document.getElementById("previewCustomer").innerHTML.replace(/<br>/g,"\n");
-    sendToRawBT(html);
-}
+      return `
+        <div>
+          <div class="slip-title">=== 厨房联 ===</div>
+          ${linesHTML || '<div class="kitchen-line">(无菜品)</div>'}
+        </div>
+      `;
+    }
 
-function printKitchen(){
-    let html = document.getElementById("previewKitchen").innerHTML.replace(/<br>/g,"\n");
-    sendToRawBT(html);
-}
+    function updateSlipPreview() {
+      const customerHTML = buildCustomerSlipHTML();
+      const kitchenHTML = buildKitchenSlipHTML();
 
-function printBoth(){
-    printCustomer();
-    setTimeout(printKitchen,500);
-}
-</script>
+      document.getElementById("customerSlipPreview").innerHTML = customerHTML;
+      document.getElementById("kitchenSlipPreview").innerHTML = kitchenHTML;
+    }
 
+    // === 打印逻辑：打开一个干净的新窗口，只放顾客联 / 厨房联，然后 window.print() ===
+
+    function openPrintWindow(innerHTML, title) {
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        alert("无法打开打印窗口（可能被浏览器拦截），请检查浏览器设置。");
+        return;
+      }
+
+      // 注意：这里加了独立的 CSS，把字号放大很多（约=现在的 4~5 倍）
+      const doc = printWindow.document;
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html lang="zh-CN">
+        <head>
+          <meta charset="UTF-8" />
+          <title>${title}</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                "PingFang SC", "Microsoft YaHei", sans-serif;
+              margin: 8px;
+            }
+            .slip-title {
+              font-size: 32px;
+              font-weight: bold;
+              text-align: center;
+              margin-bottom: 8px;
+            }
+            .customer-line {
+              font-size: 30px; /* 顾客联：约等于原来的 5 倍 */
+              margin: 4px 0;
+            }
+            .kitchen-line {
+              font-size: 40px; /* 厨房联：中文更大 */
+              font-weight: bold;
+              margin: 6px 0;
+            }
+          </style>
+        </head>
+        <body>
+          ${innerHTML}
+        </body>
+        </html>
+      `);
+      doc.close();
+
+      // 让 RawBT 打印这个窗口
+      printWindow.focus();
+      printWindow.print();
+      // 打印结束后关闭窗口（给一点时间）
+      setTimeout(() => {
+        printWindow.close();
+      }, 500);
+    }
+
+    function printCustomer() {
+      if (orderList.length === 0) {
+        alert("当前订单为空。");
+        return;
+      }
+      const html = buildCustomerSlipHTML();
+      openPrintWindow(html, "顾客联");
+    }
+
+    function printKitchen() {
+      if (orderList.length === 0) {
+        alert("当前订单为空。");
+        return;
+      }
+      const html = buildKitchenSlipHTML();
+      openPrintWindow(html, "厨房联");
+    }
+
+    function printBoth() {
+      if (orderList.length === 0) {
+        alert("当前订单为空。");
+        return;
+      }
+      const html =
+        buildCustomerSlipHTML() +
+        '<hr style="margin:8px 0;border:none;border-top:1px dashed #000;" />' +
+        buildKitchenSlipHTML();
+      openPrintWindow(html, "顾客联 + 厨房联");
+    }
+
+    // 初始化空预览
+    updateSlipPreview();
+  </script>
 </body>
 </html>
